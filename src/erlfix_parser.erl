@@ -27,9 +27,18 @@ parse(MSG) ->
     convert_to_record({MsgType,ListOfFields}).
 
 convert_to_record({logon,ListOfFields}) ->
-     #logon{header = parseHeader(ListOfFields, #header{})};
+     parseLogonMsg(ListOfFields, 
+				   #logon{header = parseHeader(ListOfFields, #header{}), trailer = parseTrailer(ListOfFields, #trailer{})}
+				  );
 convert_to_record({heartbeat,ListOfFields}) ->
 	 #heartbeat{header = parseHeader(ListOfFields, #header{}), trailer = parseTrailer(ListOfFields, #trailer{})}.
+
+parseLogonMsg([], Msg) ->
+	Msg;
+parseLogonMsg([{heartBtInt, VALUE} | REST ], Msg) ->
+	parseLogonMsg(REST, Msg#logon{heartBtInt = VALUE});
+parseLogonMsg([{UnknownTag, VALUE} | REST], Msg ) ->
+	parseLogonMsg(REST, Msg).
 
 parseHeader([],Header) ->
 	Header;
@@ -87,7 +96,7 @@ convertTagToAtom(TAG, VALUE) ->
 		"52" -> {sendingTime, VALUE};
 		"56" -> {targetCompId,VALUE};
 		"98" -> {encryptMethod,VALUE};
-		"108" -> {heartBtInt,VALUE};
+		"108" -> {heartBtInt, list_to_integer(VALUE)};
 		Other -> {list_to_atom(Other), VALUE}
 	end.
 
