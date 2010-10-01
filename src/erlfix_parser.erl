@@ -1,16 +1,16 @@
 %% @doc The module is responsible for marshaling/unmarshaling FIX data to Erlan terms and back
 %% @author: Nikolay Volnov
--module(erlfix_parser).
+-module(erlfix_parser). 
 
 %%
 %% Include files
 %%
 
 -include_lib("erlfix_messages.hrl").
-
+ 
 %%
 %% Exported Functions
-%%
+%% 
 -export([parseFromFixToErl/1, parseFromErlToFix/1]).
 
 -define(SOH,[1]).
@@ -135,7 +135,9 @@ parseTrailer([{UnknownTag, VALUE} | REST], Trailer) ->
 
 
 
-%% @doc the func parses a string to the list of tuples. Example: [{beginString,"FIX.4.2"},{bodyLength,"53"},{msgType,heartbeat},{msgSeqNum,2}, ...]
+%% @doc the func parses a binary string to the inner erlang format
+parse_to_list(MSG) when is_binary(MSG) ->
+	parse_to_list(binary_to_list(MSG));
 parse_to_list(MSG) ->
 	Tokens = string:tokens(MSG, ?SOH),
 	parse_field(Tokens).

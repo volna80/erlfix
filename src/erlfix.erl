@@ -6,12 +6,19 @@
 %% Include files
 %% --------------------------------------------------------------------
 
+
+-include_lib("erlfix_macros.hrl").
+
+
 %% --------------------------------------------------------------------
-%% Behavioural exports
+%% Behavioural exports 
 %% --------------------------------------------------------------------
 -export([
 	 start/2,
-	 stop/1
+	 stop/1,
+	 start_phase/3,
+	 prep_stop/1,
+	 config_change/3
         ]).
 
 %% --------------------------------------------------------------------
@@ -42,7 +49,10 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(Type, StartArgs) ->
-    case 'TopSupervisor':start_link(StartArgs) of
+	
+	?DBG("starting erlfix  type=[~w], args=[~w]", [Type, StartArgs]),	
+	
+    case erlfix_supervisor:start(StartArgs) of
 	{ok, Pid} ->
 	    {ok, Pid};
 	Error ->
@@ -54,7 +64,21 @@ start(Type, StartArgs) ->
 %% Returns: any
 %% --------------------------------------------------------------------
 stop(State) ->
+	?DBG("stop erlfix. state=[~w]~n",[State]),
     ok.
+
+
+start_phase(Phase, StartType, PhaseArgs) ->
+	?DBG("erlfix:start_phase() ~w, ~w, ~w", [Phase, StartType, PhaseArgs]),
+	ok.
+
+prep_stop(State) ->
+	?DBG("erlfix:pre_stop() ~w", [State]),
+	State.
+
+config_change(Changed, New, Removed) ->
+	?DBG("erlfix:config_change(Changed=[~w], New=[~w], Removed=[~w])", [Changed, New, Removed]),
+	ok.
 
 %% ====================================================================
 %% Internal functions

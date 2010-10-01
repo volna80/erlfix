@@ -7,11 +7,11 @@
 %%
 %% Include files
 %%
-
+ 
 %%
 %% Exported Functions
 %%
--export([]).
+-export([logon_pref/0]).
  
 
 
@@ -48,3 +48,19 @@ from_logon_to_fix_test() ->
 	   "8=FIX.4.29=6535=A34=149=BANZAI52=20100806-16:16:57.01156=EXEC98=0108=3010=214",
 	   Msg
 	).
+
+sample1_test() ->
+	Msg = erlfix_parser:parseFromFixToErl(<<56,61,70,73,88,46,52,46,50,1,57,61,54,53,1,51,53,61,65,1,51,52,61,57,1,52,57,61,66,65,78,90,65,73,1,53,50,61,50,48,49,48,
+49,48,48,49,45,49,53,58,53,53,58,51,50,46,53,48,52,1,53,54,61,69,88,69,67,1,57,56,61,48,1,49,48,56,61,51,48,1,49,48,61,50,49,50,1>>)
+	.
+
+
+%% Performance tests
+logon_pref() ->
+	logon_pref(0).
+
+logon_pref(100) ->
+	ok;
+logon_pref(Int) ->
+	erlfix_parser:parseFromFixToErl("8=FIX.4.29=6535=A34=149=BANZAI52=20100806-16:16:57.01156=EXEC98=0108=3010=214"),
+	logon_pref(Int + 1).

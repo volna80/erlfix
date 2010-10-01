@@ -1,0 +1,7 @@
+# ingore beam files
+*.beam
+# ignore any logs
+*.log
+# ignore eclipse settings
+.settings
+.project
