@@ -1,0 +1,27 @@
+%% Author: 1
+%% Created: 17.05.2012
+%% Description: TODO: Add description to erlfix_test_suite
+-module(erlfix_test_suite).
+
+%%
+%% Include files
+%%
+
+%%
+%% Exported Functions
+%%
+-export([test/0]).
+
+%%
+%% API Functions
+%%
+
+test()->
+	eunit:test(erlfix_parser),
+	ok.
+
+
+%%
+%% Local Functions
+%%
+

@@ -1,6 +1,6 @@
 %% Author: Nikolay Volnov
 %% Created: 06.08.2010
--module(erlfix_parser_test).
+-module(erlfix_parser_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("erlfix_messages.hrl").
@@ -13,6 +13,7 @@
 %%
 -export([logon_pref/0]).
  
+
 
 
 from_fix_to_heartbeat_test() ->
