@@ -6,3 +6,4 @@ compile:
 	
 clean:
 	rm ./ebin/*.beam
+

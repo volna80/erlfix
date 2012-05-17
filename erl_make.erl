@@ -23,8 +23,3 @@ make(Mode) ->
     	_ ->
     		erlfix_test_suite:test()
     end.
-
-%%
-%% Local Functions
-%%
-
