@@ -18,6 +18,7 @@
 
 test()->
 	eunit:test(erlfix_parser),
+	eunit:test(erlfix_parser2),
 	ok.
 
 

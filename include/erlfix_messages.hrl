@@ -5,4 +5,4 @@
 -record(trailer,{checkSum}).
 
 -record(logon,{header,encryptMethod,heartBtInt,trailer}).
--record(heartbeat,{header,trailer}).
+-record(heartbeat,{header = #header{} , trailer = #trailer{} } ).
