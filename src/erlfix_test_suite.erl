@@ -6,6 +6,7 @@
 %%
 %% Include files
 %%
+-include_lib("erlfix_macros.hrl").
 
 %%
 %% Exported Functions
@@ -17,8 +18,9 @@
 %%
 
 test()->
-	eunit:test(erlfix_parser),
+	%%eunit:test(erlfix_parser),
 	eunit:test(erlfix_parser2),
+	?DBG("HELLO ~w~n", erlfix_parser_generator:generate("./etc/FIX42.xml")),
 	ok.
 
 
