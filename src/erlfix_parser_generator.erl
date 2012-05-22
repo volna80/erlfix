@@ -35,14 +35,25 @@ generate(XMLDoc) ->
 			io:format("could not open file due to ~p.~n", Reason)
 	end.
     
-
 template(E = #xmlElement{name='fix'}) ->
-	%%["-record(header,{",xslapply(template_header/1, select("field", E)), "})."];
-    ["-record(header,{"," ", "})."];
+	[xslapply(fun template/1, select("header", E)),
+     xslapply(fun template/1, select("trailer", E))];    
+template(E = #xmlElement{name='header'}) ->
+	[FIRST | REST] = xslapply(fun template/1, select("field", E)),
+	["-record(header,{", string:substr(FIRST,3), REST, "}).", io_lib:nl()];
+template(E = #xmlElement{name = 'trailer'}) ->
+	[FIRST | REST] = xslapply(fun template/1, select("field", E)),
+	["-record(trailer,{", string:substr(FIRST,3), REST, "}).", io_lib:nl()];	
+template(E = #xmlElement{name='field'}) ->
+	[Value] = xslapply(fun template/1, select("@name", E)),
+	", " ++ string:to_lower(Value);
 template(E) ->
 	built_in_rules(fun template/1, E).
+
 %%template_header(E = #xmlElement{name='field'}) ->
-%%	[xmerl_xs:value_of(xmerl_xs:select(".",E)), ","].
+%%	[xmerl_xs:value_of(xmerl_xs:select(".",E)), ","];
+%%template_header(E) ->
+%%	built_in_rules(fun template_header/1, E).
 
 
 %%
