@@ -1,187 +1,177 @@
-%% @doc The module is responsible for marshaling/unmarshaling FIX data to Erlan terms and back
-%% @author: Nikolay Volnov
--module(erlfix_parser). 
-
-%%
-%% Include files
-%%
+-module(erlfix_parser).
 
 -include_lib("erlfix_messages.hrl").
- 
-%%
-%% Exported Functions
-%% 
--export([parseFromFixToErl/1, parseFromErlToFix/1]).
+
+-include_lib("erlfix_macros.hrl").
+
+-export([encode/1, decode/1]).
 
 -define(SOH,[1]).
 
-%%
-%% API Functions
-%%
+encode(Fix) ->
+ok.
 
-%% @doc parses an erlang object to a FIX message 
-
-parseFromErlToFix(Msg) when is_tuple(Msg) ->
-	parseFromErlToFix(tuple_to_list(Msg));
-parseFromErlToFix([logon | Values]) ->
-	decode(record_info(fields,logon), Values, []);
-parseFromErlToFix([heartbeat | Values]) ->
-	decode(record_info(fields,heartbeat), Values,[]).
-
-
-%% @doc decode a list of values to FIX string message
-
--spec decode([atom()],[any()], string()) -> string().
-
-decode([],[], Result) ->
-	Result;
-decode([header | Fields], [ Value | Other], Result) ->
-  	Header = decodeHeader(
-	record_info(fields,header), 
-	lists:sublist(tuple_to_list(Value), 2, record_info(size, header)),
-	[]),
-    decode(Fields, Other, lists:append(Result, Header));
-decode([trailer | Fields], [Value | Other], Result) ->
-	Trailer = decodeTrailer( 
-	  record_info(fields, trailer), 
-	  lists:sublist(tuple_to_list(Value), 2, record_info(size, trailer)), 
-	  []),
-     decode(Fields, Other, lists:append(Result, Trailer));
-decode([heartBtInt | Fields], [Value | Other], Result) ->
-	decode(Fields, Other, lists:append([Result, "108=", integer_to_list(Value), ?SOH]));
-decode([encryptMethod | Fields], [Value | Other], Result) ->
-	decode(Fields, Other, lists:append([Result, "98=", Value, ?SOH]));
-decode([_Unknown | Fields], [ Value | Other], Result) ->
-	decode(Fields, Other, Result).
-
--spec decodeHeader([atom()], [any()], string()) -> string().
-
-decodeHeader([],[], Result) ->
-	Result;
-decodeHeader([beginString | Fields], [Value | Other], Result) ->
-	decodeHeader(Fields, Other, lists:append([Result, "8=", Value, ?SOH]));
-decodeHeader([bodyLength | Fields], [Value | Other], Result) ->
-	decodeHeader(Fields, Other, lists:append([Result, "9=", Value, ?SOH]));
-decodeHeader([msgType | Fields], [ Value | Other ], Result ) ->
-	decodeHeader( Fields, Other, lists:append( [ Result, "35=", msgTypeToStr(Value), ?SOH]));
-decodeHeader([senderCompId | Fields], [ Value | Other ], Result ) ->
-	decodeHeader( Fields, Other, lists:append( [ Result, "49=", Value, ?SOH]));
-decodeHeader([targetCompId | Fields] , [ Value | Other], Result) ->
-	decodeHeader( Fields, Other, lists:append( [ Result, "56=", Value, ?SOH]));
-decodeHeader([msgSeqNum | Fields], [ Value | Other ], Result) ->
-	decodeHeader( Fields, Other, lists:append( [ Result, "34=", integer_to_list(Value), ?SOH]));
-decodeHeader([sendingTime | Fields], [ Value | Other ], Result) ->
-	decodeHeader( Fields, Other, lists:append( [ Result, "52=", Value, ?SOH])).
-
--spec decodeTrailer([atom()],[any()], string()) -> string().
-
-decodeTrailer([],[], Result) ->
-	Result;
-decodeTrailer([checkSum | Fields], [Value | Other], Result) ->
-	decodeTrailer(Fields, Other, lists:append([Result, "10=", Value, ?SOH])).
-  
-%% @doc parses a string msg to one of erlfix records (see erlfix_messages).
-parseFromFixToErl(MSG) ->
-	ListOfFields = parse_to_list(MSG),
-
-    case lists:keyfind(msgType, 1, ListOfFields) of
-       {msgType, MsgType} ->  convert_to_record({MsgType,ListOfFields});
-       false -> false %% @todo if false, throw exception
-    end.
-
-convert_to_record({logon,ListOfFields}) ->
-     parseLogonMsg(ListOfFields, 
-				   #logon{header = parseHeader(ListOfFields, #header{}), trailer = parseTrailer(ListOfFields, #trailer{})}
-				  );
-convert_to_record({heartbeat,ListOfFields}) ->
-	 #heartbeat{header = parseHeader(ListOfFields, #header{}), trailer = parseTrailer(ListOfFields, #trailer{})}.
-
-parseLogonMsg([], Msg) ->
-	Msg;
-parseLogonMsg([{heartBtInt, VALUE} | REST ], Msg) ->
-	parseLogonMsg(REST, Msg#logon{heartBtInt = VALUE});
-parseLogonMsg([{encryptMethod, VALUE} | Rest], Msg) ->
-    parseLogonMsg(Rest, Msg#logon{encryptMethod = VALUE});
-parseLogonMsg([{UnknownTag, VALUE} | REST], Msg ) ->
-	parseLogonMsg(REST, Msg).
-
-parseHeader([],Header) ->
-	Header;
-parseHeader([{beginString, VALUE} | REST], Header) ->
-	parseHeader(REST,Header#header{beginString = VALUE});
-parseHeader([{bodyLength, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{bodyLength = VALUE});
-parseHeader([{msgType, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{msgType = VALUE});
-parseHeader([{senderCompId, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{senderCompId = VALUE});
-parseHeader([{targetCompId, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{targetCompId = VALUE});
-parseHeader([{msgSeqNum, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{msgSeqNum = VALUE});
-parseHeader([{sendingTime, VALUE} | REST], Header) ->
-	parseHeader(REST, Header#header{sendingTime = VALUE});
-parseHeader([{UnknownTag, VALUE} | REST], Header) ->
-	%%just ingore it
-	parseHeader(REST , Header).
-
-parseTrailer([], Trailer) ->
-	Trailer;
-parseTrailer([{checkSum, VALUE} | REST], Trailer) ->
-	parseTrailer(REST, Trailer#trailer{checkSum = VALUE});
-parseTrailer([{UnknownTag, VALUE} | REST], Trailer) ->
-	parseTrailer(REST, Trailer).
-	
-
-
-
-%% @doc the func parses a binary string to the inner erlang format
-parse_to_list(MSG) when is_binary(MSG) ->
-	parse_to_list(binary_to_list(MSG));
-parse_to_list(MSG) ->
-	Tokens = string:tokens(MSG, ?SOH),
-	parse_field(Tokens).
- 
-parse_field([]) ->
-	[];
-parse_field([FIELD | REST]) ->
-	[TAG,VALUE] = string:tokens(FIELD, "="),
-	lists:append(
-	  [convertTagToAtom(TAG,VALUE)],
-	  parse_field(REST)
-	).
-
-
-%% help's functions
-
-convertTagToAtom(TAG, VALUE) ->
-	case TAG of
-		"8" -> {beginString, VALUE};
-		"9" -> {bodyLength, VALUE};
-		"10" -> {checkSum, VALUE};
-		"34" -> {msgSeqNum, list_to_integer(VALUE)};
-		"35" -> {msgType, parseMsgType(VALUE)};
-		"49" -> {senderCompId, VALUE};
-		"50" -> {senderSubId, VALUE};
-		"52" -> {sendingTime, VALUE};
-		"56" -> {targetCompId,VALUE};
-		"98" -> {encryptMethod,VALUE};
-		"108" -> {heartBtInt, list_to_integer(VALUE)};
-		Other -> {list_to_atom(Other), VALUE}
-	end.
-
--spec msgTypeToStr(atom()) -> string().
-
-msgTypeToStr(MsgType) ->
+decode(MSG) when is_binary(MSG) ->
+    decode(binary_to_list(MSG));
+decode(MSG) ->
+    Tokens = string:tokens(MSG, ?SOH),
+    Fun = fun(I) ->  string:tokens(I, "=") end,
+    FieldList = lists:map(Fun, Tokens),
+    [["8", BeginString], ["9", BodyLength], ["35", MsgType] | FieldList2] = FieldList,
     case MsgType of
-          logon -> "A";
-          heartbeat -> "0";
-          Other -> atom_to_list(Other)
-   end.
+        "D" -> decodenewordersingle(#newordersingle{header=#header{beginstring=BeginString, bodylength=BodyLength, msgtype = MsgType}, trailer=#trailer{}}, FieldList2)	;
+        "0" -> decodeheartbeat(#heartbeat{header=#header{beginstring=BeginString, bodylength=BodyLength, msgtype = MsgType}, trailer=#trailer{}}, FieldList2)	;
+        false -> false %% wrong format
+    end. 
 
-parseMsgType(MsgType) ->
-	case MsgType of
-		"A" -> logon;
-		"0" -> heartbeat;
-		Other -> list_to_atom(Other)
-	end.
+decodeheartbeat(Msg,[]) -> 
+ Msg;
+decodeheartbeat(Msg, [["112", Value] | Rest]) -> 
+    decodeheartbeat(Msg#heartbeat{testreqid=Value}, Rest);
+decodeheartbeat(Msg, [[_, Value] | Rest]) ->
+    decodeheartbeat(Msg,Rest).
+
+decodenewordersingle(Msg,[]) -> 
+ Msg;
+decodenewordersingle(Msg, [["440", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{clearingaccount=Value}, Rest);
+decodenewordersingle(Msg, [["439", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{clearingfirm=Value}, Rest);
+decodenewordersingle(Msg, [["389", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{discretionoffset=Value}, Rest);
+decodenewordersingle(Msg, [["388", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{discretioninst=Value}, Rest);
+decodenewordersingle(Msg, [["211", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{pegdifference=Value}, Rest);
+decodenewordersingle(Msg, [["210", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{maxshow=Value}, Rest);
+decodenewordersingle(Msg, [["204", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{customerorfirm=Value}, Rest);
+decodenewordersingle(Msg, [["203", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{coveredoruncovered=Value}, Rest);
+decodenewordersingle(Msg, [["77", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{openclose=Value}, Rest);
+decodenewordersingle(Msg, [["192", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{orderqty2=Value}, Rest);
+decodenewordersingle(Msg, [["193", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{futsettdate2=Value}, Rest);
+decodenewordersingle(Msg, [["355", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedtext=Value}, Rest);
+decodenewordersingle(Msg, [["354", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedtextlen=Value}, Rest);
+decodenewordersingle(Msg, [["58", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{text=Value}, Rest);
+decodenewordersingle(Msg, [["120", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{settlcurrency=Value}, Rest);
+decodenewordersingle(Msg, [["121", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{forexreq=Value}, Rest);
+decodenewordersingle(Msg, [["47", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{rule80a=Value}, Rest);
+decodenewordersingle(Msg, [["13", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{commtype=Value}, Rest);
+decodenewordersingle(Msg, [["12", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{commission=Value}, Rest);
+decodenewordersingle(Msg, [["427", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{gtbookinginst=Value}, Rest);
+decodenewordersingle(Msg, [["126", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{expiretime=Value}, Rest);
+decodenewordersingle(Msg, [["432", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{expiredate=Value}, Rest);
+decodenewordersingle(Msg, [["168", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{effectivetime=Value}, Rest);
+decodenewordersingle(Msg, [["59", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{timeinforce=Value}, Rest);
+decodenewordersingle(Msg, [["117", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{quoteid=Value}, Rest);
+decodenewordersingle(Msg, [["23", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{ioiid=Value}, Rest);
+decodenewordersingle(Msg, [["377", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{solicitedflag=Value}, Rest);
+decodenewordersingle(Msg, [["376", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{complianceid=Value}, Rest);
+decodenewordersingle(Msg, [["15", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{currency=Value}, Rest);
+decodenewordersingle(Msg, [["99", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{stoppx=Value}, Rest);
+decodenewordersingle(Msg, [["44", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{price=Value}, Rest);
+decodenewordersingle(Msg, [["40", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{ordtype=Value}, Rest);
+decodenewordersingle(Msg, [["152", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{cashorderqty=Value}, Rest);
+decodenewordersingle(Msg, [["38", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{orderqty=Value}, Rest);
+decodenewordersingle(Msg, [["60", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{transacttime=Value}, Rest);
+decodenewordersingle(Msg, [["114", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{locatereqd=Value}, Rest);
+decodenewordersingle(Msg, [["54", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{side=Value}, Rest);
+decodenewordersingle(Msg, [["140", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{prevclosepx=Value}, Rest);
+decodenewordersingle(Msg, [["351", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedsecuritydesc=Value}, Rest);
+decodenewordersingle(Msg, [["350", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedsecuritydesclen=Value}, Rest);
+decodenewordersingle(Msg, [["107", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{securitydesc=Value}, Rest);
+decodenewordersingle(Msg, [["349", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedissuer=Value}, Rest);
+decodenewordersingle(Msg, [["348", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{encodedissuerlen=Value}, Rest);
+decodenewordersingle(Msg, [["106", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{issuer=Value}, Rest);
+decodenewordersingle(Msg, [["207", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{securityexchange=Value}, Rest);
+decodenewordersingle(Msg, [["223", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{couponrate=Value}, Rest);
+decodenewordersingle(Msg, [["231", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{contractmultiplier=Value}, Rest);
+decodenewordersingle(Msg, [["206", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{optattribute=Value}, Rest);
+decodenewordersingle(Msg, [["202", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{strikeprice=Value}, Rest);
+decodenewordersingle(Msg, [["201", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{putorcall=Value}, Rest);
+decodenewordersingle(Msg, [["205", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{maturityday=Value}, Rest);
+decodenewordersingle(Msg, [["200", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{maturitymonthyear=Value}, Rest);
+decodenewordersingle(Msg, [["167", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{securitytype=Value}, Rest);
+decodenewordersingle(Msg, [["22", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{idsource=Value}, Rest);
+decodenewordersingle(Msg, [["48", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{securityid=Value}, Rest);
+decodenewordersingle(Msg, [["65", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{symbolsfx=Value}, Rest);
+decodenewordersingle(Msg, [["55", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{symbol=Value}, Rest);
+decodenewordersingle(Msg, [["81", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{processcode=Value}, Rest);
+decodenewordersingle(Msg, [["100", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{exdestination=Value}, Rest);
+decodenewordersingle(Msg, [["111", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{maxfloor=Value}, Rest);
+decodenewordersingle(Msg, [["110", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{minqty=Value}, Rest);
+decodenewordersingle(Msg, [["18", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{execinst=Value}, Rest);
+decodenewordersingle(Msg, [["21", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{handlinst=Value}, Rest);
+decodenewordersingle(Msg, [["64", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{futsettdate=Value}, Rest);
+decodenewordersingle(Msg, [["63", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{settlmnttyp=Value}, Rest);
+decodenewordersingle(Msg, [["1", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{account=Value}, Rest);
+decodenewordersingle(Msg, [["76", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{execbroker=Value}, Rest);
+decodenewordersingle(Msg, [["109", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{clientid=Value}, Rest);
+decodenewordersingle(Msg, [["11", Value] | Rest]) -> 
+    decodenewordersingle(Msg#newordersingle{clordid=Value}, Rest);
+decodenewordersingle(Msg, [[_, Value] | Rest]) ->
+    decodenewordersingle(Msg,Rest).
+
+

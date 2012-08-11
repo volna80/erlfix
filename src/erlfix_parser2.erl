@@ -35,7 +35,7 @@ decode(MSG) ->
 	[["8", BeginString], ["9", BodyLength], ["35", MsgType] | FieldList2] = FieldList,
 
 	case MsgType of
-		"0" -> decodeHeartbeat(#heartbeat{header=#header{beginString=BeginString, bodyLength=BodyLength, msgType = MsgType}, trailer=#trailer{}}, FieldList2);
+		"0" -> decodeHeartbeat(#heartbeat{header=#header{beginstring=BeginString, bodylength=BodyLength, msgtype = MsgType}, trailer=#trailer{}}, FieldList2);
 		false -> false %% wrong format
     end.
 
@@ -47,28 +47,28 @@ decode(MSG) ->
 decodeHeartbeat(Msg, []) ->
 	Msg;
 decodeHeartbeat(Msg, [["8", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{beginString=Value},
+	Header = Msg#heartbeat.header#header{beginstring=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header},Rest);
 decodeHeartbeat(Msg, [["9", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{bodyLength=Value},
+	Header = Msg#heartbeat.header#header{bodylength=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header},Rest);
 decodeHeartbeat(Msg, [["35", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{msgType=Value},
+	Header = Msg#heartbeat.header#header{msgtype=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header}, Rest);
 decodeHeartbeat(Msg, [["34", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{msgSeqNum=Value},
+	Header = Msg#heartbeat.header#header{msgseqnum=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header}, Rest);
 decodeHeartbeat(Msg, [["49", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{senderCompId=Value},
+	Header = Msg#heartbeat.header#header{sendercompid=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header}, Rest);
 decodeHeartbeat(Msg, [["52", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{sendingTime=Value},
+	Header = Msg#heartbeat.header#header{sendingtime=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header}, Rest);
 decodeHeartbeat(Msg, [["56", Value] | Rest]) ->
-	Header = Msg#heartbeat.header#header{targetCompId=Value},
+	Header = Msg#heartbeat.header#header{targetcompid=Value},
 	decodeHeartbeat(Msg#heartbeat{header=Header}, Rest);
 decodeHeartbeat(Msg, [["10", Value] | Rest]) ->
-	Trailer = Msg#heartbeat.trailer#trailer{checkSum=Value},
+	Trailer = Msg#heartbeat.trailer#trailer{checksum=Value},
 	decodeHeartbeat(Msg#heartbeat{trailer=Trailer}, Rest);
 decodeHeartbeat(Msg, [[_, Value] | Rest]) ->
     %%unknown field, ignore it

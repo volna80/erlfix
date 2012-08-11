@@ -20,7 +20,6 @@
 test()->
 	%%eunit:test(erlfix_parser),
 	eunit:test(erlfix_parser2),
-	?DBG("HELLO ~w~n", erlfix_parser_generator:generate("./etc/FIX42.xml")),
 	ok.
 
 
