@@ -25,14 +25,194 @@ decode(MSG) ->
     end. 
 
 decodeheartbeat(Msg,[]) -> 
- Msg;
+    Msg;
+decodeheartbeat(Msg, [["370", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{onbehalfofsendingtime=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["369", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{lastmsgseqnumprocessed=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["347", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{messageencoding=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["213", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{xmldata=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["212", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{xmldatalen=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["122", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{origsendingtime=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["52", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{sendingtime=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["97", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{possresend=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["43", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{possdupflag=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["145", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{delivertolocationid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["129", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{delivertosubid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["144", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{onbehalfoflocationid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["116", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{onbehalfofsubid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["143", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{targetlocationid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["57", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{targetsubid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["142", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{senderlocationid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["50", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{sendersubid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["34", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{msgseqnum=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["91", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{securedata=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["90", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{securedatalen=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["128", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{delivertocompid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["115", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{onbehalfofcompid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["56", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{targetcompid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["49", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{sendercompid=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["35", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{msgtype=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["9", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{bodylength=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["8", Value] | Rest]) -> 
+    Header = Msg#heartbeat.header#header{beginstring=Value},
+    decodeheartbeat(Msg#heartbeat{header=Header},Rest);
+decodeheartbeat(Msg, [["10", Value] | Rest]) -> 
+    Trailer = Msg#heartbeat.trailer#trailer{checksum=Value},
+    decodeheartbeat(Msg#heartbeat{trailer=Trailer},Rest);
+decodeheartbeat(Msg, [["89", Value] | Rest]) -> 
+    Trailer = Msg#heartbeat.trailer#trailer{signature=Value},
+    decodeheartbeat(Msg#heartbeat{trailer=Trailer},Rest);
+decodeheartbeat(Msg, [["93", Value] | Rest]) -> 
+    Trailer = Msg#heartbeat.trailer#trailer{signaturelength=Value},
+    decodeheartbeat(Msg#heartbeat{trailer=Trailer},Rest);
 decodeheartbeat(Msg, [["112", Value] | Rest]) -> 
     decodeheartbeat(Msg#heartbeat{testreqid=Value}, Rest);
 decodeheartbeat(Msg, [[_, Value] | Rest]) ->
     decodeheartbeat(Msg,Rest).
 
 decodenewordersingle(Msg,[]) -> 
- Msg;
+    Msg;
+decodenewordersingle(Msg, [["370", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{onbehalfofsendingtime=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["369", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{lastmsgseqnumprocessed=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["347", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{messageencoding=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["213", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{xmldata=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["212", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{xmldatalen=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["122", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{origsendingtime=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["52", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{sendingtime=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["97", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{possresend=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["43", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{possdupflag=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["145", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{delivertolocationid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["129", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{delivertosubid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["144", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{onbehalfoflocationid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["116", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{onbehalfofsubid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["143", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{targetlocationid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["57", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{targetsubid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["142", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{senderlocationid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["50", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{sendersubid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["34", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{msgseqnum=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["91", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{securedata=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["90", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{securedatalen=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["128", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{delivertocompid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["115", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{onbehalfofcompid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["56", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{targetcompid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["49", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{sendercompid=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["35", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{msgtype=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["9", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{bodylength=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["8", Value] | Rest]) -> 
+    Header = Msg#newordersingle.header#header{beginstring=Value},
+    decodenewordersingle(Msg#newordersingle{header=Header},Rest);
+decodenewordersingle(Msg, [["10", Value] | Rest]) -> 
+    Trailer = Msg#newordersingle.trailer#trailer{checksum=Value},
+    decodenewordersingle(Msg#newordersingle{trailer=Trailer},Rest);
+decodenewordersingle(Msg, [["89", Value] | Rest]) -> 
+    Trailer = Msg#newordersingle.trailer#trailer{signature=Value},
+    decodenewordersingle(Msg#newordersingle{trailer=Trailer},Rest);
+decodenewordersingle(Msg, [["93", Value] | Rest]) -> 
+    Trailer = Msg#newordersingle.trailer#trailer{signaturelength=Value},
+    decodenewordersingle(Msg#newordersingle{trailer=Trailer},Rest);
 decodenewordersingle(Msg, [["440", Value] | Rest]) -> 
     decodenewordersingle(Msg#newordersingle{clearingaccount=Value}, Rest);
 decodenewordersingle(Msg, [["439", Value] | Rest]) -> 

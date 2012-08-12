@@ -36,6 +36,14 @@ generate(XMLDoc) ->
 	%% list: list of {name, msgtype}
 	Messages = [K || {K,_} <- FieldsByMessage],
 	
+	%% [FieldName]
+	HeaderFields = tmp_parse_header_fields(XmlContent),
+	?DBG("~p ~n", [HeaderFields]),
+	
+	%% [FieldName]
+    TrailerFields = tmp_parse_trailer_fields(XmlContent),
+	?DBG("~p ~n", [TrailerFields]),
+	
 	%%header
 	case file:open("../include/erlfix_messages.hrl", [write]) of
 		{ok, IOF} ->
@@ -52,7 +60,7 @@ generate(XMLDoc) ->
 	case file:open("../src/erlfix_parser.erl", [write]) of
 		{ok, IOF2} ->
 			io:format(IOF2, "~s~n", [tmp_message_parser_main_body(Messages)]),
-			io:format(IOF2, "~s~n", [tmp_message_parser(FieldsByMessage, TagByName, [])]),
+			io:format(IOF2, "~s~n", [tmp_message_parser(FieldsByMessage, TagByName, HeaderFields, TrailerFields, [])]),
 			file:close(IOF2);
 		{error, Reason2} ->
 			io:format("could not open file due to ~p.~n", Reason2)
@@ -85,6 +93,22 @@ tmp_parse_list_of_fields(E = #xmlElement{name = 'field'}) ->
 	string:to_lower(Name);
 tmp_parse_list_of_fields(E)->
 	built_in_rules(fun tmp_parse_list_of_fields/1, E).
+
+tmp_parse_header_fields(E = #xmlElement{name='fix'}) ->
+	xslapply(fun tmp_parse_header_fields/1, select("header/field", E));
+tmp_parse_header_fields(E = #xmlElement{name='field'}) ->
+	[Name] = xslapply(fun tmp_parse_list_of_fields/1, select("@name", E)),
+	string:to_lower(Name);
+tmp_parse_header_fields(E) ->
+	built_in_rules(fun tmp_parse_header_fields/1, E).
+
+tmp_parse_trailer_fields(E = #xmlElement{name='fix'}) ->
+	xslapply(fun tmp_parse_trailer_fields/1, select("trailer/field", E));
+tmp_parse_trailer_fields(E = #xmlElement{name='field'}) ->
+	[Name] = xslapply(fun tmp_parse_trailer_fields/1, select("@name", E)),
+	string:to_lower(Name);
+tmp_parse_trailer_fields(E) ->
+	built_in_rules(fun tmp_parse_trailer_fields/1, E).
 
 
 %% ==================================================================================
@@ -132,27 +156,59 @@ tmp_message_parser_case([{MsgName, MsgType} | REST], Result) ->
 %%  decodeheartbeat(Msg, [[_, Value] | Rest]) ->
 %%    decodeheartbeat(Msg,Rest).
 
-tmp_message_parser([],_, Result) ->
+tmp_message_parser([],_, _, _,Result) ->
 	[Result];
-tmp_message_parser([{{MsgName,_},Fields} | REST ], TagByName, Result) ->
-	Result2 = Result ++ tmp_message_parser2(Fields, MsgName, TagByName, []),
-	tmp_message_parser(REST, TagByName, Result2).
+tmp_message_parser([{{MsgName,_},Fields} | REST ], TagByName, HeaderFields, TrailerFields, Result) ->
+	Result2 = Result ++ 
+				  "decode" ++ MsgName ++ "(Msg,[]) -> \n" ++
+                  "    Msg;\n" ++
+				  tmp_message_parser_header(HeaderFields, MsgName, TagByName,[]) ++
+				  tmp_message_parser_trailer(TrailerFields,MsgName, TagByName, []) ++
+				  tmp_message_parser_body(Fields, MsgName, TagByName, []) ++
+                 "decode" ++ MsgName ++ "(Msg, [[_, Value] | Rest]) ->\n" ++
+                 "    decode" ++ MsgName ++ "(Msg,Rest).\n\n",
+	tmp_message_parser(REST, TagByName,HeaderFields,TrailerFields, Result2).
 
-tmp_message_parser2([], MsgName, _, Result)->
-	"decode" ++ MsgName ++ "(Msg,[]) -> \n" ++
-    "    Msg;\n" ++
-    Result ++
-	"decode" ++ MsgName ++ "(Msg, [[_, Value] | Rest]) ->\n" ++
-    "    decode" ++ MsgName ++ "(Msg,Rest).\n\n";
-tmp_message_parser2([FieldName | REST ],MsgName, TagByName, Result)->
+
+tmp_message_parser_header([], MsgName, _, Result)->
+	Result;
+tmp_message_parser_header([FieldName | REST ],MsgName, TagByName, Result)->
+	case  lists:keyfind(FieldName, 1, TagByName) of
+		{_,FieldTag} ->
+				Result2 = "decode" ++ MsgName ++ "(Msg, [[\"" ++ FieldTag ++ "\", Value] | Rest]) -> \n" ++
+					      "    Header = Msg#" ++ MsgName ++ ".header#header{" ++ FieldName ++ "=Value},\n" ++
+                          "    decode" ++ MsgName ++ "(Msg#" ++ MsgName ++ "{header=Header},Rest);\n" ++ Result,
+	            tmp_message_parser_header(REST,MsgName,TagByName, Result2);
+		false ->
+			%% couldn't find a tag value, throw exception?
+			tmp_message_parser_header(REST,MsgName,TagByName, Result)
+	end.
+
+tmp_message_parser_trailer([], MsgName, _, Result)->
+	Result;
+tmp_message_parser_trailer([FieldName | REST ],MsgName, TagByName, Result)->
+	case  lists:keyfind(FieldName, 1, TagByName) of
+		{_,FieldTag} ->
+				Result2 = "decode" ++ MsgName ++ "(Msg, [[\"" ++ FieldTag ++ "\", Value] | Rest]) -> \n" ++
+					      "    Trailer = Msg#" ++ MsgName ++ ".trailer#trailer{" ++ FieldName ++ "=Value},\n" ++
+                          "    decode" ++ MsgName ++ "(Msg#" ++ MsgName ++ "{trailer=Trailer},Rest);\n" ++ Result,
+	            tmp_message_parser_trailer(REST,MsgName,TagByName, Result2);
+		false ->
+			%% couldn't find a tag value, throw exception?
+			tmp_message_parser_trailer(REST,MsgName,TagByName, Result)
+	end.
+
+tmp_message_parser_body([], MsgName, _, Result)->
+	Result;
+tmp_message_parser_body([FieldName | REST ],MsgName, TagByName, Result)->
 	case  lists:keyfind(FieldName, 1, TagByName) of
 		{_,FieldTag} ->
 				Result2 = "decode" ++ MsgName ++ "(Msg, [[\"" ++ FieldTag ++ "\", Value] | Rest]) -> \n" ++
                           "    decode" ++ MsgName ++ "(Msg#" ++ MsgName ++ "{" ++ FieldName ++ "=Value}, Rest);\n" ++ Result,
-	            tmp_message_parser2(REST,MsgName,TagByName, Result2);
+	            tmp_message_parser_body(REST,MsgName,TagByName, Result2);
 		false ->
 			%% couldn't find a tag value, throw exception?
-			tmp_message_parser2(REST,MsgName,TagByName, Result)
+			tmp_message_parser_body(REST,MsgName,TagByName, Result)
 	end.
 	
 
